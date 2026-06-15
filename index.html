@@ -575,7 +575,7 @@ function saveFeInfo(){
 }
 
 // ── auth ─────────────────────────────────────────────────────
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzRsaoNDGXB1OYi83ODgaGk05ggcc_ye30OClC_uBjkp-vE5uU0NgENPENsLJlaep1o/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxa-fUZc0cKMi4gse-W_Fu0cxjrSIdFm2SW8gSNoXHbyrCnLiXp_LudPy734by_jF2u/exec';
 let currentUser=null,currentPass=null,currentDisplayName=null;
 
 function getSession(){
@@ -634,16 +634,25 @@ async function pullFromSheets(){
       method:'POST',
       body:JSON.stringify({action:'read',user:currentUser,pass:currentPass})
     });
-    const json=await res.json();
+    const text=await res.text();
+    let json;
+    try{json=JSON.parse(text);}catch(e){console.error('JSON parse error:',text);return;}
     if(json.status==='ok'&&json.data&&json.data.length){
       json.data.forEach((row,i)=>{
         const m=MONTHS[i];if(!m)return;
         const d=state[m.id];
-        d.tech=String(row.tech||'');d.tech_date=row.tech_date||'';
-        d.cake=String(row.cake||'');d.cake_date=row.cake_date||'';
-        d.fe=String(row.fe||'');d.fe_date=row.fe_date||'';
-        d.mc=String(row.mc||'');d.mc_date=row.mc_date||'';
-        d.note=row.note||'';d.savedAt=row.savedAt||'';d.savedBy=row.savedBy||'';
+        // số từ Sheets về dạng number, cần convert sang string cho input
+        d.tech = row.tech>0 ? String(row.tech) : '';
+        d.tech_date = row.tech_date||'';
+        d.cake = row.cake>0 ? String(row.cake) : '';
+        d.cake_date = row.cake_date||'';
+        d.fe   = row.fe>0   ? String(row.fe)   : '';
+        d.fe_date   = row.fe_date||'';
+        d.mc   = row.mc>0   ? String(row.mc)   : '';
+        d.mc_date   = row.mc_date||'';
+        d.note    = row.note||'';
+        d.savedAt = row.savedAt||'';
+        d.savedBy = row.savedBy||'';
         if(!d.proofs)d.proofs=[];
       });
       saveState();
@@ -657,8 +666,8 @@ async function showApp(){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('mainApp').style.display='block';
   document.getElementById('userDisplayName').textContent=currentDisplayName;
+  document.getElementById('headerStatus').textContent='ĐANG TẢI DỮ LIỆU...';
   loadState();
-  // kéo data từ Sheets trước, sau đó mới render
   await pullFromSheets();
   renderMonths();updateSummary();loadFeChecks();loadFeInfo();
 }
