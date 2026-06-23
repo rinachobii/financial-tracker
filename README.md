@@ -1,2 +1,2 @@
-# debt-tracker
-Dudu Debt Tracker
+# financial-tracker
+Dudu Bubu Financial Tracker
