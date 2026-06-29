@@ -692,10 +692,10 @@ const TOTAL=59278264;
 const MONTHS=[
   {id:'m6', label:'Tháng 06 / 2026',sub:'nửa cuối · ~5–6tr dư',active:true,
    plan:{tech:1197709,cake:562000,fe:1435373,mc:1300000,divy:1880000,momo:270000,zalo:140000},
-   note:'Dudu→Bubu: 11.770.500đ · UOB 15% · mượn GĐ 3M · mẹ Bubu trả nhà+nước'},
+   note:'Dudu→Bubu: 11.770.500đ · UOB ~15% · mượn GĐ 3M · mẹ Bubu trả nhà+nước · Bubu bù savings ~4.3M'},
   {id:'m7', label:'Tháng 07 / 2026',sub:'xóa Tech + tối thiểu mọi khoản',
    plan:{tech:3285000,cake:562000,fe:1435373,mc:1300000,divy:1880000,momo:270000,zalo:140000},
-   note:'Dudu→Bubu: 11.770.500đ · UOB 15% · mượn GĐ 3M · mẹ Bubu trả nhà+nước'},
+   note:'Dudu→Bubu: 11.770.500đ · UOB ~15% · mượn GĐ 3M · mẹ Bubu trả nhà+nước · Bubu bù savings ~4.3M'},
   {id:'m8', label:'Tháng 08 / 2026',sub:'dồn FE · hoãn Dì Vy · hoàn GĐ 3M',
    plan:{tech:0,cake:562000,fe:3065000,mc:1300000,divy:0,momo:256500,zalo:133000},
    note:'Dudu→Bubu: 7.183.500đ · hoàn GĐ 3M riêng · Dì Vy hoãn 1 tháng'},
@@ -1077,10 +1077,10 @@ function getDuduRemaining(mid){
 
 // Tính dư còn lại của Bubu sau UOB + sinh hoạt phần Bubu + savings
 function getBubuRemaining(mid){
-  // T7 bất thường: UOB 23M vượt xa thu nhập → âm nặng
+  // T7 bất thường: UOB 26.451.792đ vượt xa thu nhập → âm nặng
   if(mid==='m7'){
-    // Bubu T7: lương 16.5M - UOB 23M - savings 4.5M = -11M
-    return 16500000 - 23000000 - 4500000; // -11.000.000đ
+    // Bubu T7: lương 16.5M - UOB 26.451.792đ - savings 4.5M = -14.451.792đ
+    return 16500000 - 26451792 - 4500000; // -11.000.000đ
   }
   // T8+: Bubu budget cá nhân trong UOB = UOB 7M - chi chung - grab
   const chungBubu = 750000+500000+2500000+333500+1000000; // 5.083.500đ
@@ -1473,7 +1473,7 @@ function updateHousehold(){
 }
 
 // ── auth ─────────────────────────────────────────────────────
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwjhSyO49BuxuTT7s-kzmm7EFGqD7flhimvDLGtyKRw9Xr6Qh3ROnOCqaoojMsHpZRH/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbweAcowXgwwYFHMRiLz4Jm40L2JEbKBjd9kG-aFxyIu4Jmk8KsWW47-P7lk9AywE0lP/exec';
 let currentUser=null,currentPass=null,currentDisplayName=null;
 
 function getSession(){
@@ -1560,17 +1560,49 @@ async function pullFromSheets(){
         if(!d.proofs)d.proofs=[];
       });
       saveState();
-      // restore UOB data
-      if(json.uob && json.uob.length){
+      // restore UOB
+      if(json.uob&&json.uob.length){
         json.uob.forEach((row,i)=>{
           const m=UOB_MONTHS[i];if(!m)return;
           if(!uobState[m.id])uobState[m.id]={amount:'',date:'',note:'',savedAt:''};
-          uobState[m.id].amount = row.amount>0 ? String(row.amount) : '';
-          uobState[m.id].date   = row.date||'';
-          uobState[m.id].note   = row.note||'';
-          uobState[m.id].savedAt= row.savedAt||'';
+          uobState[m.id].amount=row.amount>0?String(row.amount):'';
+          uobState[m.id].date=row.date||'';uobState[m.id].note=row.note||'';uobState[m.id].savedAt=row.savedAt||'';
         });
         saveUobState();
+      }
+      // restore Budget
+      if(json.budget&&json.budget.length){
+        json.budget.forEach(entry=>{
+          const mid=MONTHS.find(m=>m.label===entry.month||m.id===entry.month)?.id;
+          if(!mid)return;
+          if(!budgetState[mid])budgetState[mid]={dudu:{},bubu:{}};
+          const who=entry.who;
+          entry.cats.forEach(cat=>{
+            const cats=who==='dudu'?BUDGET_DUDU:BUDGET_BUBU;
+            const found=cats.find(c=>c.name===cat.name);
+            if(found)budgetState[mid][who][found.id]=cat.actual>0?String(cat.actual):'';
+          });
+        });
+        saveBudgetState();
+      }
+      // restore Savings Bubu
+      if(json.svBubu&&json.svBubu.length){
+        json.svBubu.forEach((row,i)=>{
+          const m=SV_MONTHS_LIST[i];if(!m)return;
+          if(!svState[m.id])svState[m.id]={amount:'',date:'',note:'',savedAt:''};
+          svState[m.id].amount=row.amount>0?String(row.amount):'';
+          svState[m.id].savedAt=row.savedAt||'';
+        });
+        saveSvState();
+      }
+      // restore Savings Dudu
+      if(json.svDudu&&json.svDudu.length){
+        json.svDudu.forEach((row,i)=>{
+          const m=DUDU_SV_MONTHS[i];if(!m)return;
+          if(!duduSvState[m.id])duduSvState[m.id]={amount:''};
+          duduSvState[m.id].amount=row.amount>0?String(row.amount):'';
+        });
+        saveDuduSvState();
       }
     }
   }catch(e){
@@ -1610,13 +1642,27 @@ function buildPayload(){
     }),
     uob: UOB_MONTHS.map(m=>{
       const d=uobState[m.id]||{};
-      return {
-        month: m.label,
-        amount: n(d.amount)||0,
-        date: d.date||'',
-        note: d.note||'',
-        savedAt: d.savedAt||''
-      };
+      return { month:m.label, amount:n(d.amount)||0, date:d.date||'', note:d.note||'', savedAt:d.savedAt||'' };
+    }),
+    budget: BUDGET_MONTHS.flatMap(mid=>{
+      const bd=budgetState[mid]||{dudu:{},bubu:{}};
+      const mObj=MONTHS.find(m=>m.id===mid);
+      const month=mObj?mObj.label:mid;
+      const savedAt=new Date().toLocaleString('vi-VN');
+      return [
+        { month, who:'dudu', savedAt,
+          cats: BUDGET_DUDU.map(c=>({name:c.name,plan:c.plan||0,actual:n(bd.dudu[c.id])})) },
+        { month, who:'bubu', savedAt,
+          cats: BUDGET_BUBU.map(c=>({name:c.name,plan:c.plan||0,actual:n(bd.bubu[c.id])})) },
+      ];
+    }),
+    svBubu: SV_MONTHS_LIST.map(m=>{
+      const d=svState[m.id]||{};
+      return { month:m.name, amount:n(d.amount)||0, savedAt:d.savedAt||'' };
+    }),
+    svDudu: DUDU_SV_MONTHS.map(m=>{
+      const d=duduSvState[m.id]||{};
+      return { month:m.name, amount:n(d.amount)||0, savedAt:'' };
     }),
     summary:{totalPaid:totalPaid(),totalRemain:Math.max(0,TOTAL-totalPaid()),pct:Math.min(100,Math.round(totalPaid()/TOTAL*100))}
   };
