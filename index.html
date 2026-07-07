@@ -1587,35 +1587,41 @@ async function pullFromSheets(){
         });
         saveUobState();
       }
-      // restore Budget
+      // restore Budget - Apps Script returns flat rows [{month, who, name, actual}]
       if(json.budget&&json.budget.length){
-        json.budget.forEach(entry=>{
-          const mid=MONTHS.find(m=>m.label===entry.month||m.id===entry.month)?.id;
-          if(!mid)return;
+        json.budget.forEach(row=>{
+          // find matching month id
+          const mObj=MONTHS.find(m=>m.label===row.month||m.id===row.month);
+          if(!mObj)return;
+          const mid=mObj.id;
+          const who=row.who; // 'dudu' or 'bubu'
           if(!budgetState[mid])budgetState[mid]={dudu:{},bubu:{}};
-          const who=entry.who;
-          entry.cats.forEach(cat=>{
-            const cats=who==='dudu'?BUDGET_DUDU:BUDGET_BUBU;
-            const found=cats.find(c=>c.name===cat.name);
-            if(found)budgetState[mid][who][found.id]=cat.actual>0?String(cat.actual):'';
-          });
+          if(!budgetState[mid][who])budgetState[mid][who]={};
+          // find cat id by name
+          const cats=who==='dudu'?BUDGET_DUDU:BUDGET_BUBU;
+          const found=cats.find(c=>c.name===row.name);
+          if(found&&row.actual>0){
+            budgetState[mid][who][found.id]=String(row.actual);
+          }
         });
         saveBudgetState();
       }
-      // restore Savings Bubu
+      // restore Savings Bubu - match by month name
       if(json.svBubu&&json.svBubu.length){
-        json.svBubu.forEach((row,i)=>{
-          const m=SV_MONTHS_LIST[i];if(!m)return;
+        json.svBubu.forEach(row=>{
+          const m=SV_MONTHS_LIST.find(x=>x.name===row.month||x.label===row.month);
+          if(!m)return;
           if(!svState[m.id])svState[m.id]={amount:'',date:'',note:'',savedAt:''};
           svState[m.id].amount=row.amount>0?String(row.amount):'';
           svState[m.id].savedAt=row.savedAt||'';
         });
         saveSvState();
       }
-      // restore Savings Dudu
+      // restore Savings Dudu - match by month name
       if(json.svDudu&&json.svDudu.length){
-        json.svDudu.forEach((row,i)=>{
-          const m=DUDU_SV_MONTHS[i];if(!m)return;
+        json.svDudu.forEach(row=>{
+          const m=DUDU_SV_MONTHS.find(x=>x.name===row.month||x.label===row.month);
+          if(!m)return;
           if(!duduSvState[m.id])duduSvState[m.id]={amount:''};
           duduSvState[m.id].amount=row.amount>0?String(row.amount):'';
         });
